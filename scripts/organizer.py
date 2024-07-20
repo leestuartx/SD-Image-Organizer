@@ -45,8 +45,8 @@ def move_file_to_category(file_path, output_dir, category, name):
     print(f"Moved {file_path} to {dest_path}")
 
 def organize_images(base_path, output_dir):
-    character_keywords = load_keywords('../wildcards/characters.txt')
-    location_keywords = load_keywords('../wildcards/locations.txt')
+    character_keywords = load_keywords('./wildcards/characters.txt')
+    location_keywords = load_keywords('./wildcards/locations.txt')
 
     for root, dirs, files in os.walk(base_path):
         if 'characters' in dirs:
