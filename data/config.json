@@ -1,1 +1,4 @@
-{"base_dir": "C:\\ComfyUI\\output\\test_dst", "output_dir": "C:\\ComfyUI\\output\\images"}
+{
+    "base_dir": "C:\\ComfyUI\\output\\test_dst",
+    "output_dir": "C:\\ComfyUI\\output\\images"
+}
