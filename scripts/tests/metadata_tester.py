@@ -3,10 +3,9 @@ from sd_parsers import ParserManager, PromptInfo
 from PIL import Image
 import json
 import pprint
-
-# Initialize the parser manager
 from typing import Any, Dict, List
 
+# Initialize the parser manager
 parser_manager = ParserManager()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,6 +27,7 @@ def extract_metadata(image_path):
             width, height = img.size
             positive_prompt = get_prompt_text(prompt_info.prompts)
             negative_prompt = get_prompt_text(prompt_info.negative_prompts)
+            print(prompt_info.parameters)
             clip_skip = get_int(prompt_info.parameters, 'clip')
             return prompt_info, metadata, cfg_scale, steps, width, height, positive_prompt, negative_prompt, clip_skip
         else:
@@ -40,10 +40,10 @@ def extract_metadata(image_path):
 def format_metadata(prompt_info: PromptInfo):
     metadata_parts = []
 
-    # Models
-    if prompt_info.models:
-        model_text = '\n'.join([model.name for model in prompt_info.models])
-        metadata_parts.append(f"Models:\n{model_text}")
+    # Metadata
+    if prompt_info.metadata:
+        metadata_text = '\n'.join([f"{k}: {v}" for k, v in prompt_info.metadata.items()])
+        metadata_parts.append(f"Metadata:\n{metadata_text}")
 
     # Samplers
     if prompt_info.samplers:
@@ -55,20 +55,15 @@ def format_metadata(prompt_info: PromptInfo):
 
     # Prompts
     if prompt_info.prompts:
-        prompt_text = '\n'.join([prompt.value for prompt in prompt_info.prompts])
+        prompt_text = '\n'.join([prompt for prompt in prompt_info.prompts])
         metadata_parts.append(f"Prompts:\n{prompt_text}")
 
     # Negative Prompts
     if prompt_info.negative_prompts:
-        negative_prompt_text = '\n'.join([prompt.value for prompt in prompt_info.negative_prompts])
+        negative_prompt_text = '\n'.join([prompt for prompt in prompt_info.negative_prompts])
         metadata_parts.append(f"Negative Prompts:\n{negative_prompt_text}")
 
-    # Additional metadata
-    if prompt_info.metadata:
-        additional_metadata = '\n'.join([f"{k}: {v}" for k, v in prompt_info.metadata.items()])
-        metadata_parts.append(f"Additional Metadata:\n{additional_metadata}")
-
-    # Unmodified parameters
+    # Parameters
     if prompt_info.parameters:
         params_text = '\n'.join([f"{k}: {v}" for k, v in prompt_info.parameters.items()])
         metadata_parts.append(f"Parameters:\n{params_text}")
@@ -92,7 +87,7 @@ def get_int(parameters, key):
 
 def get_prompt_text(prompts):
     if prompts:
-        return '\n'.join([prompt.value for prompt in prompts])
+        return '\n'.join([prompt for prompt in prompts])
     return ""
 
 
