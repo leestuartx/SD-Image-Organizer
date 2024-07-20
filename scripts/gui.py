@@ -53,12 +53,12 @@ def display_info(prompt_info, text_widgets):
 
     # Additional metadata
     if hasattr(prompt_info, 'metadata') and prompt_info.metadata:
-        additional_metadata = '\n'.join([f"{k}: {v}" for k, v in prompt_info.metadata.items()])
+        additional_metadata = '\n'.join([k + ": " + str(v) for k, v in prompt_info.metadata.items()])
         append_text(text_widgets['additional_metadata'], additional_metadata)
 
     # Unmodified parameters
     if hasattr(prompt_info, 'parameters') and prompt_info.parameters:
-        params_text = '\n'.join([f"{k}: {v}" for k, v in prompt_info.parameters.items()])
+        params_text = '\n'.join([k + ": " + str(v) for k, v in prompt_info.parameters.items()])
         append_text(text_widgets['additional_metadata'], params_text)
 
 
@@ -77,8 +77,8 @@ def parse_image(file_path, text_widgets, image_label):
             display_info(prompt_info, text_widgets)
 
     except Exception as e:
-        logging.exception("Error reading file: %s", file_path)
-        messagebox.showerror("Error", f"Error reading file: {file_path}\n{str(e)}")
+        logging.exception("Error reading file: " + file_path)
+        messagebox.showerror("Error", "Error reading file: " + file_path + "\n" + str(e))
 
 
 def on_file_drop(event, text_widgets, image_label):
@@ -170,7 +170,7 @@ def create_gui(config, save_config):
     btn_save_paths = tk.Button(organize_frame, text="Save Paths", command=lambda: save_paths(input_dir_entry, output_dir_entry, save_config))
     btn_save_paths.grid(row=3, column=0, columnspan=2, pady=5)
 
-    btn_organize = tk.Button(organize_frame, text="Organize", command=lambda: organize_images(input_dir_entry.get(), output_dir_entry.get()))
+    btn_organize = tk.Button(organize_frame, text="Organize", command=lambda: organize_images(input_dir_entry.get(), output_dir_entry.get(), config['node_defaults']))
     btn_organize.grid(row=4, column=0, columnspan=2, pady=10)
 
     organize_frame.grid_columnconfigure(1, weight=1)
