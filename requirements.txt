@@ -1,0 +1,5 @@
+sd_parsers==0.3.1
+pillow==9.4.0
+tk
+ttkthemes
+tkinterdnd2
