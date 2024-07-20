@@ -34,7 +34,7 @@ def extract_metadata(image_path):
             return prompt_info, "No metadata found.", 0.0, 0, 0.0, 0.0, "", "", 0
     except Exception as e:
         logging.exception("Error processing image")
-        return f"Error processing image: {str(e)}", 0.0, 0, 0.0, 0.0, "", "", 0
+        return f"Error processing image: {str(e)}", "", 0.0, 0, 0.0, 0.0, "", "", 0
 
 
 def format_metadata(prompt_info: PromptInfo):
@@ -152,7 +152,9 @@ def find_positive_prompt_data(metadata: Dict[str, Any]) -> List[str]:
 
 
 if __name__ == "__main__":
-    image_path = r"C:\ComfyUI\output\images\characters\warren_g._harding\ComfyUI_0551.png"
+    image_path = r"C:\ComfyUI\output\test_dst\ComfyUI_0039.png"
+    #SD image
+    # image_path = r"C:\Output\images\characters\martin_van_buren\00013-2740811720.png"
     raw_metadata, metadata, cfg_scale, steps, width, height, positive_prompt, negative_prompt, clip_skip = extract_metadata(image_path)
 
     temp_metadata = extract_metadata_type2(image_path)
