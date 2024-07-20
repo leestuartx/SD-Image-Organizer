@@ -1,15 +1,13 @@
 import logging
 from sd_parsers import ParserManager, PromptInfo
 from PIL import Image
-import json
-import pprint
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 # Initialize the parser manager
 parser_manager = ParserManager()
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def extract_metadata(image_path):
     try:
@@ -18,32 +16,70 @@ def extract_metadata(image_path):
 
         # Parse the image directly using the parser manager
         prompt_info = parser_manager.parse(img)
-        # pprint.pp(prompt_info)
 
         if prompt_info:
             metadata = format_metadata(prompt_info)
-            cfg_scale = get_float(prompt_info.parameters, 'cfg')
-            steps = get_int(prompt_info.parameters, 'steps')
+            cfg_scale = find_value_in_dict(prompt_info.parameters, 'cfg')
+            steps = find_value_in_dict(prompt_info.parameters, 'steps')
+            vaes = find_values_in_dict(prompt_info.parameters, 'vae_name')
+            models = [model['content'] if isinstance(model, dict) else model for model in find_values_in_dict(prompt_info.parameters, 'ckpt_name')]
+            sampler_name = find_value_in_dict(prompt_info.parameters, 'sampler_name')
+            scheduler = find_value_in_dict(prompt_info.parameters, 'scheduler')
+            denoise = find_value_in_dict(prompt_info.parameters, 'denoise')
             width, height = img.size
             positive_prompt = get_prompt_text(prompt_info.prompts)
             negative_prompt = get_prompt_text(prompt_info.negative_prompts)
-            print(prompt_info.parameters)
-            clip_skip = get_int(prompt_info.parameters, 'clip')
-            return prompt_info, metadata, cfg_scale, steps, width, height, positive_prompt, negative_prompt, clip_skip
+            clip_skip = find_value_in_dict(prompt_info.parameters, 'clip')
+            return prompt_info, metadata, cfg_scale, steps, width, height, positive_prompt, negative_prompt, clip_skip, vaes, models, sampler_name, scheduler, denoise
         else:
-            return prompt_info, "No metadata found.", 0.0, 0, 0.0, 0.0, "", "", 0
+            return prompt_info, "No metadata found.", 0.0, 0, 0, 0, "", "", 0, [], [], "", "", 0.0
     except Exception as e:
         logging.exception("Error processing image")
-        return f"Error processing image: {str(e)}", "", 0.0, 0, 0.0, 0.0, "", "", 0
+        return f"Error processing image: {str(e)}", "", 0.0, 0, 0, 0, "", "", 0, [], [], "", "", 0.0
 
+def find_value_in_dict(d: Union[Dict, List], key: str, default=None) -> Any:
+    if isinstance(d, dict):
+        for k, v in d.items():
+            if k == key:
+                return v
+            elif isinstance(v, (dict, list)):
+                result = find_value_in_dict(v, key, default)
+                if result is not None:
+                    return result
+    elif isinstance(d, list):
+        for item in d:
+            result = find_value_in_dict(item, key, default)
+            if result is not None:
+                return result
+    return default
+
+def find_values_in_dict(d: Union[Dict, List], key: str) -> List[Any]:
+    values = []
+    if isinstance(d, dict):
+        for k, v in d.items():
+            if k == key:
+                values.append(v)
+            elif isinstance(v, (dict, list)):
+                values.extend(find_values_in_dict(v, key))
+    elif isinstance(d, list):
+        for item in d:
+            values.extend(find_values_in_dict(item, key))
+    return values
 
 def format_metadata(prompt_info: PromptInfo):
     metadata_parts = []
 
-    # Metadata
-    if prompt_info.metadata:
-        metadata_text = '\n'.join([f"{k}: {v}" for k, v in prompt_info.metadata.items()])
-        metadata_parts.append(f"Metadata:\n{metadata_text}")
+    # Models
+    models = [model['content'] if isinstance(model, dict) else model for model in find_values_in_dict(prompt_info.parameters, 'ckpt_name')]
+    if models:
+        model_text = '\n'.join(models)
+        metadata_parts.append(f"Models:\n{model_text}")
+
+    # VAEs
+    vaes = find_values_in_dict(prompt_info.parameters, 'vae_name')
+    if vaes:
+        vae_text = '\n'.join(vaes)
+        metadata_parts.append(f"VAEs:\n{vae_text}")
 
     # Samplers
     if prompt_info.samplers:
@@ -55,41 +91,30 @@ def format_metadata(prompt_info: PromptInfo):
 
     # Prompts
     if prompt_info.prompts:
-        prompt_text = '\n'.join([prompt for prompt in prompt_info.prompts])
+        prompt_text = '\n'.join([prompt.value for prompt in prompt_info.prompts])
         metadata_parts.append(f"Prompts:\n{prompt_text}")
 
     # Negative Prompts
     if prompt_info.negative_prompts:
-        negative_prompt_text = '\n'.join([prompt for prompt in prompt_info.negative_prompts])
+        negative_prompt_text = '\n'.join([prompt.value for prompt in prompt_info.negative_prompts])
         metadata_parts.append(f"Negative Prompts:\n{negative_prompt_text}")
 
-    # Parameters
+    # Additional metadata
+    if prompt_info.metadata:
+        additional_metadata = '\n'.join([f"{k}: {v}" for k, v in prompt_info.metadata.items()])
+        metadata_parts.append(f"Additional Metadata:\n{additional_metadata}")
+
+    # Unmodified parameters
     if prompt_info.parameters:
         params_text = '\n'.join([f"{k}: {v}" for k, v in prompt_info.parameters.items()])
         metadata_parts.append(f"Parameters:\n{params_text}")
 
     return '\n\n'.join(metadata_parts)
 
-
-def get_float(parameters, key):
-    try:
-        return float(parameters.get(key, 0.0))
-    except (ValueError, TypeError):
-        return 0.0
-
-
-def get_int(parameters, key):
-    try:
-        return int(parameters.get(key, 0))
-    except (ValueError, TypeError):
-        return 0
-
-
 def get_prompt_text(prompts):
     if prompts:
-        return '\n'.join([prompt for prompt in prompts])
+        return '\n'.join([prompt.value for prompt in prompts])
     return ""
-
 
 def extract_metadata_type2(file_path: str) -> Dict[str, Any]:
     try:
@@ -106,7 +131,6 @@ def extract_metadata_type2(file_path: str) -> Dict[str, Any]:
     except Exception as e:
         raise ValueError(f"Error extracting metadata: {e}")
 
-
 def convert_keys_to_strings(d):
     if isinstance(d, dict):
         return {str(k): convert_keys_to_strings(v) for k, v in d.items()}
@@ -114,7 +138,6 @@ def convert_keys_to_strings(d):
         return [convert_keys_to_strings(i) for i in d]
     else:
         return d
-
 
 def find_positive_prompt_data(metadata: Dict[str, Any]) -> List[str]:
     output_data = []
@@ -145,12 +168,11 @@ def find_positive_prompt_data(metadata: Dict[str, Any]) -> List[str]:
 
     return output_data
 
-
 if __name__ == "__main__":
     image_path = r"C:\ComfyUI\output\test_dst\ComfyUI_0039.png"
-    #SD image
+    # SD image
     # image_path = r"C:\Output\images\characters\martin_van_buren\00013-2740811720.png"
-    raw_metadata, metadata, cfg_scale, steps, width, height, positive_prompt, negative_prompt, clip_skip = extract_metadata(image_path)
+    raw_metadata, metadata, cfg_scale, steps, width, height, positive_prompt, negative_prompt, clip_skip, vaes, models, sampler_name, scheduler, denoise = extract_metadata(image_path)
 
     temp_metadata = extract_metadata_type2(image_path)
     metadata_str_keys = convert_keys_to_strings(temp_metadata)
@@ -167,3 +189,8 @@ if __name__ == "__main__":
     print("Positive Prompt:", positive_prompt)
     print("Negative Prompt:", negative_prompt)
     print("Clip Skip:", clip_skip)
+    print("VAEs:", vaes)
+    print("Models:", models)
+    print("Sampler Name:", sampler_name)
+    print("Scheduler:", scheduler)
+    print("Denoise:", denoise)
