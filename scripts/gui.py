@@ -2,13 +2,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageTk
-from scripts.parser import parse_image_metadata
+from scripts.metadata_parser import MetadataParser
 from scripts.organizer import organize_images
-import scripts.metadata_extractor as metadata_extractor
 import logging
 
 
-def display_info(prompt_info, text_widgets):
+def display_info(metadata, text_widgets):
     # Clear all text widgets
     for widget in text_widgets.values():
         if isinstance(widget, tk.Entry):
@@ -22,44 +21,11 @@ def display_info(prompt_info, text_widgets):
         else:
             widget.insert(tk.END, text + '\n')
 
-    # Models
-    if hasattr(prompt_info, 'models') and prompt_info.models:
-        model_text = '\n'.join([model.name for model in prompt_info.models])
-        append_text(text_widgets['model'], model_text)
-
-    # Samplers
-    if hasattr(prompt_info, 'samplers') and prompt_info.samplers:
-        sampler_names = '\n'.join([sampler.name for sampler in prompt_info.samplers])
-        append_text(text_widgets['sampler'], sampler_names)
-        for sampler in prompt_info.samplers:
-            for param, value in sampler.parameters.items():
-                if param in text_widgets:
-                    append_text(text_widgets[param], value)
-
-    # Prompts
-    if hasattr(prompt_info, 'prompts') and prompt_info.prompts:
-        prompt_text = '\n'.join([prompt.value for prompt in prompt_info.prompts])
-        append_text(text_widgets['positive_prompt'], prompt_text)
-    else:
-        # Look for the specific CharacterNames in nodes in the metadata
-        positive_prompt_text = metadata_extractor.get_workflow_node_data(prompt_info)
-        prompt_text = '\n'.join(positive_prompt_text)
-        append_text(text_widgets['positive_prompt'], prompt_text)
-
-    # Negative Prompts
-    if hasattr(prompt_info, 'negative_prompts') and prompt_info.negative_prompts:
-        negative_prompt_text = '\n'.join([prompt.value for prompt in prompt_info.negative_prompts])
-        append_text(text_widgets['negative_prompt'], negative_prompt_text)
-
-    # Additional metadata
-    if hasattr(prompt_info, 'metadata') and prompt_info.metadata:
-        additional_metadata = '\n'.join([k + ": " + str(v) for k, v in prompt_info.metadata.items()])
-        append_text(text_widgets['additional_metadata'], additional_metadata)
-
-    # Unmodified parameters
-    if hasattr(prompt_info, 'parameters') and prompt_info.parameters:
-        params_text = '\n'.join([k + ": " + str(v) for k, v in prompt_info.parameters.items()])
-        append_text(text_widgets['additional_metadata'], params_text)
+    # Display parsed metadata
+    if metadata:
+        for key, value in metadata.items():
+            if key in text_widgets:
+                append_text(text_widgets[key], value)
 
 
 def parse_image(file_path, text_widgets, image_label):
@@ -71,10 +37,25 @@ def parse_image(file_path, text_widgets, image_label):
         image_label.config(image=img)
         image_label.image = img
 
-        # Parse the file using the parser manager
-        prompt_info = parse_image_metadata(file_path)
-        if prompt_info:
-            display_info(prompt_info, text_widgets)
+        # Parse the file using MetadataParser
+        parser = MetadataParser()
+        prompt_info, formatted_metadata, cfg_scale, steps, width, height, positive_prompt, negative_prompt, clip_skip, vaes, models, sampler_name, scheduler, denoise = parser.extract_metadata(file_path)
+
+        metadata = {
+            'model': ', '.join(models),
+            'positive_prompt': positive_prompt,
+            'negative_prompt': negative_prompt,
+            'sampler': sampler_name,
+            'seed': str(parser.find_value_in_dict(prompt_info.parameters, 'seed')),
+            'steps': str(steps),
+            'cfg': str(cfg_scale),
+            'scheduler': scheduler,
+            'denoise': str(denoise),
+            'vae': ', '.join(vaes),
+            'additional_metadata': formatted_metadata
+        }
+
+        display_info(metadata, text_widgets)
 
     except Exception as e:
         logging.exception("Error reading file: " + file_path)
@@ -139,7 +120,7 @@ def create_gui(config, save_config):
     text_widgets['negative_prompt'] = create_labeled_widget(metadata_frame, "Negative Prompt", 2, scrolledtext.ScrolledText, wrap=tk.WORD, width=50, height=5)
     text_widgets['sampler'] = create_labeled_widget(metadata_frame, "Sampler", 3)
 
-    sampler_params = ['seed', 'steps', 'cfg', 'scheduler', 'denoise']
+    sampler_params = ['seed', 'steps', 'cfg', 'scheduler', 'denoise', 'vae']
     for i, param in enumerate(sampler_params, start=4):
         text_widgets[param] = create_labeled_widget(metadata_frame, param.title(), i)
 
