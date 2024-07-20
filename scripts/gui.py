@@ -2,13 +2,10 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageTk
-from scripts.config import load_config, save_config
 from scripts.parser import parse_image_metadata
 from scripts.organizer import organize_images
 import scripts.metadata_extractor as metadata_extractor
-import scripts.metadata_extractor
 import logging
-
 
 def display_info(prompt_info, text_widgets):
     # Clear all text widgets
@@ -43,14 +40,10 @@ def display_info(prompt_info, text_widgets):
         prompt_text = '\n'.join([prompt.value for prompt in prompt_info.prompts])
         append_text(text_widgets['positive_prompt'], prompt_text)
     else:
-        print('... looking')
         # Look for the specific CharacterNames in nodes in the metadata
         positive_prompt_text = metadata_extractor.get_workflow_node_data(prompt_info)
-        # print(positive_prompt_text)
-
         prompt_text = '\n'.join(positive_prompt_text)
         append_text(text_widgets['positive_prompt'], prompt_text)
-        print('prompt text:', prompt_text)
 
     # Negative Prompts
     if hasattr(prompt_info, 'negative_prompts') and prompt_info.negative_prompts:
@@ -80,10 +73,7 @@ def parse_image(file_path, text_widgets, image_label):
         # Parse the file using the parser manager
         prompt_info = parse_image_metadata(file_path)
         if prompt_info:
-            print(prompt_info)
             display_info(prompt_info, text_widgets)
-
-
 
     except Exception as e:
         logging.exception("Error reading file: %s", file_path)
@@ -101,16 +91,12 @@ def open_file_dialog(text_widgets, image_label):
         parse_image(file_path, text_widgets, image_label)
 
 
-def create_gui():
+def create_gui(config, save_config):
     root = TkinterDnD.Tk()
     root.title("Stable Diffusion Metadata Extractor")
-    # ttk.Style().theme_use('equilux')
 
     frame = tk.Frame(root)
     frame.pack(pady=10, padx=10)
-
-    # Load config
-    config = load_config()
 
     # Image display
     image_frame = tk.Frame(frame)
