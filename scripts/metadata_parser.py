@@ -23,9 +23,18 @@ class MetadataParser:
                 width, height = img.size
 
                 # Use the find_positive_prompt_data function to get the positive prompt data
-                metadata_str_keys = self.convert_keys_to_strings(prompt_info.metadata)
+                #metadata_str_keys = self.convert_keys_to_strings(prompt_info.metadata)
+                #prompt_data  = self.find_positive_prompt_data(metadata_str_keys)
+                #positive_prompt = prompt_data[0] if prompt_data else self.get_prompt_text(prompt_info.prompts)
+
+                temp_metadata = self.extract_metadata_type2(image_path)
+                metadata_str_keys = self.convert_keys_to_strings(temp_metadata)
+
                 prompt_data = self.find_positive_prompt_data(metadata_str_keys)
-                positive_prompt = prompt_data[0] if prompt_data else self.get_prompt_text(prompt_info.prompts)
+                positive_prompt = ""
+                if len(prompt_data) > 0:
+                    positive_prompt = prompt_data[0]
+
 
                 negative_prompt = self.get_prompt_text(prompt_info.negative_prompts)
                 clip_skip = self.find_value_in_dict(prompt_info.parameters, 'clip')
@@ -35,6 +44,29 @@ class MetadataParser:
         except Exception as e:
             logging.exception("Error processing image")
             return f"Error processing image: {str(e)}", "", 0.0, 0, 0, 0, "", "", 0, [], [], "", "", 0.0
+
+    def extract_metadata_type2(self, file_path: str) -> Dict[str, Any]:
+        try:
+            img = Image.open(file_path)
+            # Extract metadata using sd_parsers
+            prompt_info = self.parser_manager.parse(file_path)
+            if not prompt_info:
+                raise ValueError("No metadata found in image.")
+            metadata = {
+                "prompt": prompt_info.parameters,
+                "workflow": prompt_info.metadata
+            }
+            return metadata
+        except Exception as e:
+            raise ValueError(f"Error extracting metadata: {e}")
+
+    def convert_keys_to_strings(self, d):
+        if isinstance(d, dict):
+            return {str(k): self.convert_keys_to_strings(v) for k, v in d.items()}
+        elif isinstance(d, list):
+            return [self.convert_keys_to_strings(i) for i in d]
+        else:
+            return d
 
     def find_value_in_dict(self, d: Union[Dict, List], key: str, default=None) -> Any:
         if isinstance(d, dict):
