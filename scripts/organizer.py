@@ -56,13 +56,13 @@ def organize_images(base_path, output_dir, node_defaults):
         for file in files:
             if file.lower().endswith('.png'):
                 file_path = os.path.join(root, file)
-                print("Processing file: " + file_path)
+                #print("Processing file: " + file_path)
                 try:
                     metadata = extract_metadata(file_path)
                     metadata_str_keys = convert_keys_to_strings(metadata)
 
-                    print("Metadata for " + file + ":")
-                    print(json.dumps(metadata_str_keys, indent=4))
+                    #print("Metadata for " + file + ":")
+                    #print(json.dumps(metadata_str_keys, indent=4))
 
                     # Look for the specific CharacterNames in nodes in the metadata
                     found_character_names = find_particular_keywords(
@@ -73,7 +73,7 @@ def organize_images(base_path, output_dir, node_defaults):
                         node_name=node_defaults['node_name']
                     )
 
-                    print("Found Character Names: " + str(found_character_names))
+                    #print("Found Character Names: " + str(found_character_names))
 
                     if found_character_names:
                         # Move the images into the correct character directories
