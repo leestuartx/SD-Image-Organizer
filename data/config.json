@@ -1,4 +1,9 @@
 {
     "base_dir": "C:\\Comfy\\ComfyUI\\output",
-    "output_dir": "C:\\BFP"
+    "output_dir": "C:\\BFP",
+    "node_defaults": {
+        "node_type": "ShowText|pysssss",
+        "node_key": "Node name for S&R",
+        "node_name": "ShowText|pysssss"
+    }
 }
